@@ -1,0 +1,18 @@
+banckle_online_meeting is a standard drupal 7 module. Follow the following steps to install it.
+
+
+Requirements
+============
+
+  * Drupal 7
+  * PHP 5 with CURL support
+
+
+Installation
+============
+
+  1. Extract the archive to sites/all/modules
+  2. Go to admin/modules drupal page and enable Banckle Online Meeting
+  3. Go to admin/config/system/banckle/onlinemeeting to configure it
+  4. There is no forth step
+

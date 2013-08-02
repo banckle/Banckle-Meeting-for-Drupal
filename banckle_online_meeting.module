@@ -1,0 +1,219 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ */
+function banckle_online_meeting_permission() {
+  return array(
+    "access banckle online meeting dashboard" => array(
+      "title" => t("Manage meetings with Banckle Online Meeting"),
+      "description" => t("Perform configuration and maintenance tasks for Banckle Online Meeting."),
+    ),
+  );
+}
+
+/**
+ 
+function banckle_online_meeting_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#banckle_online_meeting":
+      if (variable_get("banckle_online_meeting_widget_code") == '') {
+		 return '<p>'.  t("Please Sign In to your Banckle account to get meeting code") .'</p>';
+      }
+      break;
+  }
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function banckle_online_meeting_menu() {
+  $items = array();
+
+  $items['admin/config/system/banckle/onlinemeeting/widget'] = array(
+    'title' => 'Banckle Online Meeting',
+    'description' => 'Configuration for Banckle Online Meeting',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('banckle_online_meeting_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items["admin/config/banckle/onlinemeeting/dashboard"] = array(
+    "title" => "Banckle Online Meeting Dashboard",
+//    "access callback" => TRUE,
+    "page callback" => "_banckle_online_meeting_dashboard_page",
+    "access arguments" => array("access banckle online meeting dashboard"),
+    "type" => MENU_NORMAL_ITEM,
+//    "menu_name" => "main",
+  );
+
+  return $items;
+}
+
+/**
+ * Page callback: Banckle Online Meeting settings
+ *
+ * @see banckle_online_meeting_menu()
+ */
+function banckle_online_meeting_form($form, &$form_state) {
+  $form['signup'] = array(
+  '#type' => 'item',
+  '#markup' => "Don't have Banckle account? <a href='http://banckle.com/action/signup' target=_blank>Sign Up for Free!</a><br/> Click on this link to login if you have already an account and get the widget code<a href='".base_path()."admin/config/banckle/onlinemeeting/dashboard' target=_blank> Sign In</a>",
+);
+  
+  $form['banckle_online_meeting_widget_code'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Banckle Online Meeting Widget Code'),
+    '#default_value' => variable_get('banckle_online_meeting_widget_code', ''),
+    '#required' => TRUE,
+  );
+  
+  $form['banckle_online_meeting_widget_width'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Banckle Online Meeting Widget Width'),
+    '#default_value' => variable_get('banckle_online_meeting_widget_width', 180),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#required' => TRUE,
+  );
+  
+  $form['banckle_online_meeting_widget_height'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Banckle Online Meeting Widget Height'),
+    '#default_value' => variable_get('banckle_online_meeting_widget_height', 430),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#required' => TRUE,
+  );
+    
+  $form['banckle_online_meeting_show_logo'] = array(
+    '#type' => 'radios',
+	'#title' => t('Show Logo'),
+    "#options" => array("true" => t("Yes"), "false" => t("No")),
+	'#default_value' => variable_get('banckle_online_meeting_show_logo', 'true'),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * @file
+ * Integrates Banckle Online Meeting with Drupal 7
+ */
+function _banckle_online_meeting_dashboard_page() {
+  global $user;
+  global $base_url;
+
+  $username = isset($user->data["banckle_online_meeting"]) && isset($user->data["banckle_online_meeting"]["banckle_online_meeting_username"]) ? $user->data["banckle_online_meeting"]["banckle_online_meeting_username"] : NULL;
+  $password = isset($user->data["banckle_online_meeting"]) && isset($user->data["banckle_online_meeting"]["banckle_online_meeting_password"]) ? $user->data["banckle_online_meeting"]["banckle_online_meeting_password"] : NULL;
+
+  if (!$username || !$password) {
+    return theme("banckle_online_meeting_no_auth_error", array(
+      "user" => $user,
+    ));
+  }
+
+  $auth_url = "https://apps.banckle.com/api/authenticate?userid=$username&password=$password&platform=drupal&sourceSite=$base_url";
+  $response = drupal_http_request($auth_url);
+  //drupal_set_message("<pre>" .print_r($response, TRUE). "</pre>");
+  if ($response->code != 200) {
+    return theme("banckle_online_meeting_network_error", array(
+      "user" => $user,
+    ));
+  }
+
+  $response = drupal_json_decode($response->data);
+  if (!$response) {
+    return theme("banckle_online_meeting_network_error", array(
+      "user" => $user,
+    ));
+  }
+
+  if (isset($response["error"])) {
+    return theme("banckle_online_meeting_invalid_auth_error", array(
+      "user" => $user,
+    ));
+  }
+
+  return theme("banckle_online_meeting_dashboard", array(
+    "base_url" => $base_url,
+    "exit_uri" => $base_url . "?q=" . $_GET['q'],
+    "user" => $user,
+    "username" => $username,
+    "password" => $password,
+    "token" => $response["return"]["token"],
+  ));
+}
+
+/**
+ * Implements hook_theme().
+ */
+function banckle_online_meeting_dashboard_theme($existing, $type, $module, $path) {
+  if ($type != "module" && $module != "banckle_online_meeting") {
+    return;
+  }
+
+  $r = array();
+
+  if (variable_get("banckle_online_meeting_widget_code")) {
+    $r["banckle_online_meeting"] = array(
+      "variables" => array(
+        "banckle_online_meeting_widget_code" => variable_get("banckle_online_meeting_widget_code")
+      ),
+      "template" => "banckle_online_meeting"
+    );
+
+  }
+
+  return $r;
+}
+
+
+function banckle_online_meeting_theme($existing, $type, $module, $path) {
+  if ($type != "module" && $module != "banckle_online_meeting") {
+    return;
+  }
+
+  return array(
+    "banckle_online_meeting_dashboard" => array(
+      "template" => "banckle_online_meeting_dashboard",
+    ),
+    "banckle_online_meeting_no_auth_error" => array(
+      "template" => "banckle_online_meeting_no_auth_error",
+    ),
+    "banckle_online_meeting_invalid_auth_error" => array(
+      "template" => "banckle_online_meeting_invalid_auth_error",
+    ),
+    "banckle_online_meeting_auth_error" => array(
+      "template" => "banckle_online_meeting_auth_error",
+    ),
+    "banckle_online_meeting_network_error" => array(
+      "template" => "banckle_online_meeting_network_error",
+    ),
+  );
+}
+
+function banckle_online_meeting_page_alter(&$page) {
+  global $user;
+    $array = banckle_online_meeting_form(array(),$user);
+    $widget_code=$array['banckle_online_meeting_widget_code']['#default_value'];
+    //drupal_set_message(print_r($widget_code, true));
+    $widget_width=$array['banckle_online_meeting_widget_width']['#default_value'];
+    $widget_height=$array['banckle_online_meeting_widget_height']['#default_value'];
+    $widget_logo=$array['banckle_online_meeting_show_logo']['#default_value'];
+   // drupal_set_message(print_r(file_get_contents('https://meeting.banckle.com/meeting/api/widget?wid='.$widget_code.'&showlogo='.$widget_logo.'" style="width:'.$widget_width.'px;height:'.$widget_height.'px;')));exit;
+   $data=drupal_http_request('https://meeting.banckle.com/meeting/api/widget?wid='.$widget_code);
+   $flag = json_decode($data->data);
+   if(isset($flag->error->code) && !empty($flag->error->code))
+   {
+    $page["sidebar_first"]["banckle_online_meeting"] = array(
+        '#markup' => t('You have enter an invalid code or your meeting has been expired.'),
+      );
+    }else{
+    $page["sidebar_first"]["banckle_online_meeting"] = array(
+        '#markup' => t('<iframe src="https://meeting.banckle.com/meeting/api/widget?wid='.$widget_code.'&showlogo='.$widget_logo.'" style="width:'.$widget_width.'px;height:'.$widget_height.'px;" frameborder="0"></iframe>'),
+      );
+    }
+}

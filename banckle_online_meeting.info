@@ -1,0 +1,4 @@
+name = Banckle Online Meeting
+description = Allows users to join meeting and interact with others using Banckle Online Meeting.
+core = 7.x
+configure = admin/config/system/banckle/onlinemeeting

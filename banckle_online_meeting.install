@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * @file
+ * Install and uninstall functions for the banckle_online_meeting module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function banckle_online_meeting_uninstall() {
+  variable_del("banckle_online_meeting_widget_code");
+  variable_del("banckle_online_meeting_widget_width");
+  variable_del("banckle_online_meeting_widget_height");
+  variable_del("banckle_online_meeting_show_logo");
+}

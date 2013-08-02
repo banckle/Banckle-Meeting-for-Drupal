@@ -1,0 +1,1 @@
+<h3>The  Banckle Login ID and Password you have specified in <?php echo l(t('your profile'), 'user/' . $user->uid . '/edit'); ?> are not valid. <?php echo l(t('Click here'), 'user/' . $user->uid . '/edit'); ?> to edit your profile.</h3>
